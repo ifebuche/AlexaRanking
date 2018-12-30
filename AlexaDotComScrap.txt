@@ -1,0 +1,42 @@
+#This is a code to scrape the Alexa.com world website ranking
+
+import requests, pandas
+from bs4 import BeautifulSoup
+
+countries = pandas.read_csv("country abr.csv", encoding = "latin1") #import the ISO 3166-1 code list in a dataframe
+list = countries.code #grab the code column into a list
+list = list[1:] #drop the first row/item which is a header
+
+#Alexa.com has a page for each country. Build a url list of these by adding the ISO code to the base url for easy ref
+urls=[]
+BaseUrl="https://www.alexa.com/topsites/countries/"
+for item in list:
+    address= BaseUrl + str(item)
+    urls.append(address)
+
+#With requests and BeautifulSoup, scrape contents from the site    
+Listing=[]
+for line in urls:
+    print(line, len(line))
+    r=requests.get(line)
+    c=r.content
+    soup=BeautifulSoup(c, "html.parser")
+    all=soup.find_all("div", {"class":"tr site-listing"})
+
+    for item in all:
+        d={}
+        try:
+            d["Country"] = line[41:]
+            d["Rank"]=item.find("div", {"class":"td number"}).text
+            d["Site"]=item.find("p", {"class":""}).text.replace("\n", "")
+        #d["Description"]=item.find("div", {"class":"description"}).text
+            d["DailyTimeOnSite"] = item.find("div", {"class":"td right"}).text
+        except:
+            pass
+        Listing.append(d)
+
+#With pandas, build a dataframe from the scraped contents and write to a csv file.
+df=pandas.DataFrame(Listing)
+df.to_csv("AlexaRanking_011-27-18.csv")
+print("Done")
+        
